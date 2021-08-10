@@ -10,6 +10,7 @@ namespace AzDocs.RepositoryProvisioner.Models
     public class ProvisionRepositoryRequest
     {
         public string EventType { get; set; }
+        public string CommitBranch { get; set; }
         public string OldCommitId { get; set; }
         public string NewCommitId { get; set; }
         public string RepositoryName { get; set; }
@@ -20,9 +21,10 @@ namespace AzDocs.RepositoryProvisioner.Models
         public string NewRepositoryType { get; internal set; }
         public string NewRepositoryComponentName { get; internal set; }
 
-        public ProvisionRepositoryRequest(string eventType, string oldCommitId, string newCommitId, string repositoryName, string azureDevOpsTeamProjectName, string azureDevOpsTeamProjectId, Guid repositoryId)
+        public ProvisionRepositoryRequest(string eventType, string commitBranch, string oldCommitId, string newCommitId, string repositoryName, string azureDevOpsTeamProjectName, string azureDevOpsTeamProjectId, Guid repositoryId)
         {
             EventType = eventType;
+            CommitBranch = commitBranch;
             OldCommitId = oldCommitId;
             NewCommitId = newCommitId;
             RepositoryName = repositoryName;

@@ -26,6 +26,7 @@ namespace AzDocs.RepositoryProvisioner.Helpers
             dynamic data = JsonConvert.DeserializeObject(await new StreamReader(request.Body).ReadToEndAsync());
             var provisionRepositoryRequest = new ProvisionRepositoryRequest(
                     (string)data?.eventType,
+                    (string)data?.resource?.refUpdates?[0]?.name,
                     (string)data?.resource?.refUpdates?[0]?.oldObjectId,
                     (string)data?.resource?.refUpdates?[0]?.newObjectId,
                     (string)data?.resource?.repository?.name,
@@ -37,6 +38,15 @@ namespace AzDocs.RepositoryProvisioner.Helpers
             if (provisionRepositoryRequest.EventType != "git.push")
                 throw new ArgumentException("You are sending the wrong event to this function.");
 
+            // Check if we are committing to the main branch
+            log.LogInformation($"[INITIALIZATION] Branch found: {provisionRepositoryRequest.CommitBranch}.");
+            if (provisionRepositoryRequest.CommitBranch != "refs/heads/main")
+            {
+                log.LogInformation($"[INITIALIZATION] Found another branch than main. Skipping this one!");
+                throw new NotFoundException("Found another branch than main. Skipping this one!");
+            }
+
+            log.LogInformation($"[INITIALIZATION] OldCommitID: {provisionRepositoryRequest.OldCommitId} found.");
             if (provisionRepositoryRequest.OldCommitId != "0000000000000000000000000000000000000000")
             {
                 log.LogInformation($"[INITIALIZATION] Just another commit to existing repository \"{provisionRepositoryRequest.RepositoryName}\". Skipping this one! (Reference Commit ID: {provisionRepositoryRequest.NewCommitId}).");

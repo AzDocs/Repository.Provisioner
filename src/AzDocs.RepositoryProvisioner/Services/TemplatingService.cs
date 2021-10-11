@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using AzDocs.RepositoryProvisioner.Helpers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -91,6 +92,10 @@ namespace AzDocs.RepositoryProvisioner.Services
             {
                 return GetReplacementGuid(placeholderValue).ToString();
             }
+            if (placeholderValue.StartsWith("PASSWORD_"))
+            {
+                return GetReplacementPassword(placeholderValue);
+            }
 
             switch (placeholderValue)
             {
@@ -110,12 +115,20 @@ namespace AzDocs.RepositoryProvisioner.Services
                     {
                         return _pluralizer.Singularize(componentName);
                     }
+                case "COMPONENTNAME_Plural_ToLower":
+                    {
+                        return _pluralizer.Pluralize(componentName).ToLower();
+                    }
+                case "COMPONENTNAME_Singular_ToLower":
+                    {
+                        return _pluralizer.Singularize(componentName).ToLower();
+                    }
             }
 
             return match.Value;
         }
 
-        static Dictionary<string, Guid> guidDictionary = new Dictionary<string, Guid>();
+        static Dictionary<string, Guid> _guidDictionary = new Dictionary<string, Guid>();
         /// <summary>
         /// Fetches the replacement GUID. Will create a new GUID when its the first time calling this guid. Will return earlier generated GUID's whenever it finds the given placeholder key.
         /// </summary>
@@ -123,11 +136,39 @@ namespace AzDocs.RepositoryProvisioner.Services
         /// <returns></returns>
         private static Guid GetReplacementGuid(string placeholderKey)
         {
+            if (!_guidDictionary.ContainsKey(placeholderKey))
+                _guidDictionary.Add(placeholderKey, Guid.NewGuid());
 
-            if (!guidDictionary.ContainsKey(placeholderKey))
-                guidDictionary.Add(placeholderKey, Guid.NewGuid());
+            return _guidDictionary[placeholderKey];
+        }
 
-            return guidDictionary[placeholderKey];
+        static Dictionary<string, string> _passwordDictionary = new Dictionary<string, string>();
+        /// <summary>
+        /// Fetches the replacement password. Will create a new password when its the first time calling this replacement key. Will return earlier generated passwords whenever it finds the given placeholder key.
+        /// Format: `PASSWORD_[TotalLength]_[NumberOfNonAlphanumericChars]`; can be appended with _ (underscore) and any text to create a reusable password, eg: `PASSWORD_10_3_pwd1`.
+        /// </summary>
+        /// <param name="placeholderKey">The password placeholder key</param>
+        /// <returns></returns>
+        private static string GetReplacementPassword(string placeholderKey)
+        {
+            if (!_passwordDictionary.ContainsKey(placeholderKey))
+            {
+                var length = 10;
+                var numberOfNonAlphanumericCharacters = 4;
+                var keySplit = placeholderKey.Split('_');
+                if (keySplit.Length >= 3)
+                {
+                    if (int.TryParse(keySplit[1], out int newLength) && newLength >= 5 && newLength <= 128)
+                        length = newLength;
+
+                    if (int.TryParse(keySplit[2], out int newNumberOfNonAlphanumericCharacters) && newNumberOfNonAlphanumericCharacters <= length && newNumberOfNonAlphanumericCharacters >= 0)
+                        numberOfNonAlphanumericCharacters = newNumberOfNonAlphanumericCharacters;
+                }
+
+                _passwordDictionary.Add(placeholderKey, PasswordHelper.Generate(length, numberOfNonAlphanumericCharacters));
+            }
+
+            return _passwordDictionary[placeholderKey];
         }
     }
 }

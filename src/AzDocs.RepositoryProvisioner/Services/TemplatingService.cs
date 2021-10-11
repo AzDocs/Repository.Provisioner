@@ -144,7 +144,7 @@ namespace AzDocs.RepositoryProvisioner.Services
 
         static Dictionary<string, string> _passwordDictionary = new Dictionary<string, string>();
         /// <summary>
-        /// Fetches teh replacement password. Will create a new password when its the first time calling this replacement key. Will return earlier generated passwords whenever it finds the given placeholder key.
+        /// Fetches the replacement password. Will create a new password when its the first time calling this replacement key. Will return earlier generated passwords whenever it finds the given placeholder key.
         /// Format: `PASSWORD_[TotalLength]_[NumberOfNonAlphanumericChars]`; can be appended with _ (underscore) and any text to create a reusable password, eg: `PASSWORD_10_3_pwd1`.
         /// </summary>
         /// <param name="placeholderKey">The password placeholder key</param>

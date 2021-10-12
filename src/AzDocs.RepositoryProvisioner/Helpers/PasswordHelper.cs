@@ -30,7 +30,7 @@ namespace AzDocs.RepositoryProvisioner.Helpers
             var rnd = new Random();
             var numNumChars = rnd.Next(1, length - numberOfNonAlphanumericCharacters - 3);
             var numAlphaCharsCaps = rnd.Next(1, length - numberOfNonAlphanumericCharacters - numNumChars - 2);
-            var numAlphaCharsLower = rnd.Next(1, length - numberOfNonAlphanumericCharacters - numNumChars - numAlphaCharsCaps - 1);
+            var numAlphaCharsLower = length - numberOfNonAlphanumericCharacters - numNumChars - numAlphaCharsCaps;
 
             var pwd = "";
             for (int i = 0; i < numNumChars; i++)

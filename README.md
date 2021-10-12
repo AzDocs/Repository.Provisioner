@@ -15,7 +15,7 @@ As with other AzDocs components, this will only work in combination with Azure &
 | `AzureDevOps.Repository.Author.Name` | `John Doe` | Your displayname to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Repository.Author.Email` | `johndoe@company.com` | Your e-mailadress to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Pipeline.BuildAgentQueueName` | `Hosted Ubuntu 1604` | The buildqueue name. For now we recommend using `Hosted Ubuntu 1604` as the value. Other values seem to have bugs. You can override the real buildqueue in your YAML pipeline. |
-| `AzureDevOps.Pipeline.DefaultPipelineNamePostfix ` | `SomeOptionalPostfix` | Optional. If there are more than one `AzureDevOps.Repository.YamlPipelineFilePath` files found in any subdir, the one found in the rootdir will receive this postfix. |
+| `AzureDevOps.Pipeline.DefaultPipelineNamePostfix ` | `SomeOptionalPostfix` | Optional. The pipeline created based on the `AzureDevOps.Repository.YamlPipelineFilePath` file in the root dir will receive this postfix. |
 
 # How to install
 1. Deploy this Azure Function

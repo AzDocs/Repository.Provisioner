@@ -38,7 +38,8 @@ namespace AzDocs.RepositoryProvisioner
                 var repositoryAuthorName = configurationBuilder["AzureDevOps.Repository.Author.Name"];
                 var repositoryAuthorEmail = configurationBuilder["AzureDevOps.Repository.Author.Email"];
                 var pipelineYamlBuildAgentQueue = configurationBuilder["AzureDevOps.Pipeline.BuildAgentQueueName"];
-                
+                var pipelineYamlDefaultPipelineNamePostfix = configurationBuilder["AzureDevOps.Pipeline.DefaultPipelineNamePostfix"];
+
                 var azureDevOpsBaseUrl = $"https://dev.azure.com/{azureDevOpsOrganizationName}";
 
                 // Parse & verify the incoming request
@@ -72,8 +73,8 @@ namespace AzDocs.RepositoryProvisioner
                 // Start the git commit & push for the new repository                
                 GitService.GitCommitAndPush(log, newRepositoryLocalPathDirectoryInfo, templateRepository, personalAccessToken, repositoryAuthorName, repositoryAuthorEmail);
 
-                // Setup the Azure DevOps Pipeline (import pipeline-orchestrator.yml)
-                PipelineService.CreatePipeline(log, azureDevOpsBaseUrl, provisionRepositoryRequest, newRepository, personalAccessToken, pipelineYamlBuildAgentQueue, pipelineYamlFilePath);
+                // Setup the Azure DevOps Pipeline(s) (import all pipeline-orchestrator.yml's)
+                PipelineService.CreatePipelines(log, azureDevOpsBaseUrl, provisionRepositoryRequest, newRepository, newRepositoryLocalPathDirectoryInfo, personalAccessToken, pipelineYamlBuildAgentQueue, pipelineYamlFilePath, pipelineYamlDefaultPipelineNamePostfix);
 
                 // Return 200 OK
                 return new OkResult();

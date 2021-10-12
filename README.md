@@ -15,6 +15,7 @@ As with other AzDocs components, this will only work in combination with Azure &
 | `AzureDevOps.Repository.Author.Name` | `John Doe` | Your displayname to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Repository.Author.Email` | `johndoe@company.com` | Your e-mailadress to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Pipeline.BuildAgentQueueName` | `Hosted Ubuntu 1604` | The buildqueue name. For now we recommend using `Hosted Ubuntu 1604` as the value. Other values seem to have bugs. You can override the real buildqueue in your YAML pipeline. |
+| `AzureDevOps.Pipeline.DefaultPipelineNamePostfix ` | `SomeOptionalPostfix` | Optional. If there are more than one `AzureDevOps.Repository.YamlPipelineFilePath` files found in any subdir, the one found in the rootdir will receive this postfix. |
 
 # How to install
 1. Deploy this Azure Function
@@ -24,4 +25,4 @@ As with other AzDocs components, this will only work in combination with Azure &
 5. Make sure to also put in a YAML Pipeline into the repo (we use `pipeline-orchestrator.yml` for this in the root of the repository).
 6. Create a new repo `Test.Microservice.MyFirstMicroservice` (make sure to commit a readme or anything, so that there will be a code push initialized) and wait a few seconds.
 7. Refresh the page and you will see the processed files from the `Test.Templates.Microservice` repository in your new `Test.Microservice.MyFirstMicroservice` repository!
-8. Go to `Pipelines` --> `All` and find your new pipeline imported!
+8. Go to `Pipelines` --> `All` and find your new pipeline(s) imported!

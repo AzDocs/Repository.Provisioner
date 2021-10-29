@@ -10,11 +10,12 @@ As with other AzDocs components, this will only work in combination with Azure &
 | Variable name | Example value | Description |
 | ------------- | ------------- | ------------- |
 | `AzureDevOps.OrganizationName` | `mydevopsorg` | The organization name of your Azure DevOps instance. |
-| `AzureDevOps.PersonalAccessToken` | `xfn2q7kdv9sypb2d3mvqtgdyx7xsba926q5rat2mn62ynj7347vf` | Your Personal Access Token which has read&write access to the repositories you want to use this provisioner for. |
+| `AzureDevOps.PersonalAccessToken` | `xfn2q7kdv9sypb2d3mvqtgdyx7xsba926q5rat2mn62ynj7347vf` | Your Personal Access Token which has `Read & Execute` for Builds, `Read, write & manage` for Code, `Read` for Project and Team, `Read, write & execute` for Release to the organisation you deploy this Provisioner for. |
 | `AzureDevOps.Repository.YamlPipelineFilePath` | `pipeline-orchestrator.yml` | The path to your pipeline YAML. |
 | `AzureDevOps.Repository.Author.Name` | `John Doe` | Your displayname to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Repository.Author.Email` | `johndoe@company.com` | Your e-mailadress to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Pipeline.BuildAgentQueueName` | `Hosted Ubuntu 1604` | The buildqueue name. For now we recommend using `Hosted Ubuntu 1604` as the value. Other values seem to have bugs. You can override the real buildqueue in your YAML pipeline. |
+| `AzureDevOps.Pipeline.DefaultPipelineNamePostfix ` | `SomeOptionalPostfix` | Optional. The pipeline created based on the `AzureDevOps.Repository.YamlPipelineFilePath` file in the root dir will receive this postfix. |
 
 # How to install
 1. Deploy this Azure Function
@@ -24,4 +25,4 @@ As with other AzDocs components, this will only work in combination with Azure &
 5. Make sure to also put in a YAML Pipeline into the repo (we use `pipeline-orchestrator.yml` for this in the root of the repository).
 6. Create a new repo `Test.Microservice.MyFirstMicroservice` (make sure to commit a readme or anything, so that there will be a code push initialized) and wait a few seconds.
 7. Refresh the page and you will see the processed files from the `Test.Templates.Microservice` repository in your new `Test.Microservice.MyFirstMicroservice` repository!
-8. Go to `Pipelines` --> `All` and find your new pipeline imported!
+8. Go to `Pipelines` --> `All` and find your new pipeline(s) imported!

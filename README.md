@@ -10,7 +10,7 @@ As with other AzDocs components, this will only work in combination with Azure &
 | Variable name | Example value | Description |
 | ------------- | ------------- | ------------- |
 | `AzureDevOps.OrganizationName` | `mydevopsorg` | The organization name of your Azure DevOps instance. |
-| `AzureDevOps.PersonalAccessToken` | `xfn2q7kdv9sypb2d3mvqtgdyx7xsba926q5rat2mn62ynj7347vf` | Your Personal Access Token which has read&write access to the repositories you want to use this provisioner for. |
+| `AzureDevOps.PersonalAccessToken` | `xfn2q7kdv9sypb2d3mvqtgdyx7xsba926q5rat2mn62ynj7347vf` | Your Personal Access Token which has `Read & Execute` for Builds, `Read, write & manage` for Code, `Read` for Project and Team, `Read, write & execute` for Release to the organisation you deploy this Provisioner for. |
 | `AzureDevOps.Repository.YamlPipelineFilePath` | `pipeline-orchestrator.yml` | The path to your pipeline YAML. |
 | `AzureDevOps.Repository.Author.Name` | `John Doe` | Your displayname to be used in the GIT commit while provisioning the repositories. |
 | `AzureDevOps.Repository.Author.Email` | `johndoe@company.com` | Your e-mailadress to be used in the GIT commit while provisioning the repositories. |

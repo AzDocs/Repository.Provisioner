@@ -1,0 +1,177 @@
+##############################################################################################################################################################################################################################
+#
+# AzDocs Repository Provisioner (Repoinator) pipeline (with Application Gateway)
+#
+# Make sure to have the following vars in your pipeline variables:
+#   CompanyName: Your company name. This will be used to randomize url's to avoid collision with other companies' deployments. Please stick to only alphanumeric characters (no hyphens, spaces or dots etc).
+#   AzDocsTeamProjectId: Azure DevOps Project ID (GUID) for your AzDocs TeamProject
+#   AzDocsBuildDefinitionId: The build definition id of your AzDocs build (int)
+#   AppServicePlanName: The name of the existing app service plan to use for this function app.
+#   AppServicePlanResourceGroupName: The name of the resourcegroup of the existing app service plan to use for this function app.
+#   LogAnalyticsWorkspaceResourceGroupName: The name of the resourcegroup of the existing log analytics workspace to use for logging.
+#   LogAnalyticsWorkspaceName: The name of the existing log analytics workspace to use for logging.
+#   AzureDevOps.OrganizationName: The organization name of your Azure DevOps instance.
+#   AzureDevOps.PersonalAccessToken: Your Personal Access Token which has read&write access to the repositories you want to use this provisioner for.
+#   AzureDevOps.Repository.YamlPipelineFilePath: The path to your pipeline YAML.
+#   AzureDevOps.Repository.Author.Name: Your displayname to be used in the GIT commit while provisioning the repositories.
+#   AzureDevOps.Repository.Author.Email: Your e-mailadress to be used in the GIT commit while provisioning the repositories.
+#   AzureDevOps.Pipeline.BuildAgentQueueName: The buildqueue name. For now we recommend using Hosted Ubuntu 1604 as the value. Other values seem to have bugs. You can override the real buildqueue in your YAML pipeline.
+#   AzureDevOps.Pipeline.DefaultPipelineNamePostfix: Optional. The pipeline created based on the AzureDevOps.Repository.YamlPipelineFilePath file in the root dir will receive this postfix.
+#   DeployInfra: true/false. If this is true; the infra will be created and when this is false it will only deploy the software to the existing infra. This is set to false to gain speed during deploying a second or following time.
+#   GatewayName: The name of your existing Application Gateway.
+#   GatewayResourceGroupName: The name of the resourcegroup where your existing Application Gateway resides in.
+#   GatewayVnetResourceGroupName: The name of the resourcegroup of the VNet where the gateway's outgoing traffic comes from.
+#   GatewayVnetName: The name of the VNet where the gateway's outgoing traffic comes from.
+#   GatewaySubnetName: The name of the subnet where the gateway's outgoing traffic comes from.
+#   ApplicationGatewayWafName: The name of your Application Gateway WAF policy resource
+#   CertificateKeyvaultName: The name of the existing keyvault which is attached to your Application Gateway which holds the certificate to be used.
+#   CertificateKeyvaultResourceGroupName: The name of the resourcegroup where your CertificateKeyvaultName resides in.
+#
+# These parameters have to be filled in (this is due to a technical limitation in Azure DevOps)
+#   GatewayIngressDomainName_Dev: The domainname you want to use as your entrypoint for the repository provisioner for dev. This should be matching the certificate details below.
+#   GatewayIngressDomainName_Acc: The domainname you want to use as your entrypoint for the repository provisioner for acc. This should be matching the certificate details below.
+#   GatewayIngressDomainName_Prd: The domainname you want to use as your entrypoint for the repository provisioner for prd. This should be matching the certificate details below.
+#   GatewayCertificateSecureFileName_Dev: The name of the secure file containing your pfx for the AppGw certificate for dev
+#   GatewayCertificateSecureFileName_Acc: The name of the secure file containing your pfx for the AppGw certificate for acc
+#   GatewayCertificateSecureFileName_Prd: The name of the secure file containing your pfx for the AppGw certificate for prd
+#   GatewayCertificatePassword_Dev: The password for the AppGw certificate pfx for dev
+#   GatewayCertificatePassword_Acc: The password for the AppGw certificate pfx for acc
+#   GatewayCertificatePassword_Prd: The password for the AppGw certificate pfx for prd
+#
+# The following vars can be optional in your pipeline-variable:
+#   AzDocsBranchName: The name of the AzDocs branch to use by default.
+#   ResourceTags: The tags you want to apply to the created resources. This has to be in the following format: @('MyTagName=MyTagValue';'MySecondTag=AnotherValue')
+#
+# If you want to use VNet integration/whitelisting between the resources, you can use the following variables
+#   EnableVnetIntegrationBetweenResources: true/false; enable or disable the use of VNet integration/VNet whitelisting between resources.
+#   ApplicationVnetIntegrationSubnetName: The name of the subnet where the functionapp will be "VNet integrated" in.
+#   ApplicationVnetIntegrationVnetName: The name of the VNet where the functionapp will be "VNet integrated" in.
+#   ApplicationVnetIntegrationVnetResourceGroupName: The name of the resourcegroup of the VNet where the functionapp will be "VNet integrated" in.
+#
+# And finally add 3 Service Connections to your Azure DevOps Project to your Azure Subscriptions with the Service Connection Names: "AZDOCSREPOPROVISIONERSUBSCRIPTIONDEV", "AZDOCSREPOPROVISIONERSUBSCRIPTIONACC", "AZDOCSREPOPROVISIONERSUBSCRIPTIONPRD".
+# Unfortunately theres a technical limitation in Azure DevOps which prevents us from making this a pipeline variable.
+#
+##############################################################################################################################################################################################################################
+
+# Template example for the pipeline-orchestrator
+parameters:
+  - name: AzDocsBranchName
+    type: string
+    default: $(AzDocsBranchName)
+  - name: EnvironmentName_Dev
+    type: string
+    default: dev
+  - name: EnvironmentName_Acc
+    type: string
+    default: acc
+  - name: EnvironmentName_Prd
+    type: string
+    default: prd
+  - name: GatewayIngressDomainName_Dev
+    type: string
+  - name: GatewayIngressDomainName_Acc
+    type: string
+  - name: GatewayIngressDomainName_Prd
+    type: string
+  - name: GatewayCertificateSecureFileName_Dev
+    type: string
+  - name: GatewayCertificateSecureFileName_Acc
+    type: string
+  - name: GatewayCertificateSecureFileName_Prd
+    type: string
+  - name: GatewayCertificatePassword_Dev
+    type: string
+  - name: GatewayCertificatePassword_Acc
+    type: string
+  - name: GatewayCertificatePassword_Prd
+    type: string
+
+name: $(date:yyyy.MM.dd)$(rev:.r)-$(Build.SourceBranchName)
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - pipeline-orchestrator.yml
+      - pipeline-orchestrator-withgateway.yml
+      - pipeline-build.yml
+      - pipeline-release.yml
+
+# it is important to pick a specific version so that you have the possibility to run a version with the exact same version agent.
+pool:
+  vmImage: "ubuntu-20.04"
+
+variables:
+  # Basic
+  - name: ProjectName
+    value: RepositoryProvisioner
+
+  # Stage Pool
+  - name: Stage.Pool
+    value: "ubuntu-20.04"
+
+stages:
+  - stage: "Build"
+    jobs:
+      - job: Build
+        displayName: "Build"
+        steps:
+          - template: pipeline-build.yml
+  - stage: "${{ parameters.EnvironmentName_Dev }}"
+    displayName: "Deploy to ${{ parameters.EnvironmentName_Dev }}"
+    pool:
+      vmImage: $(Stage.Pool)
+    jobs:
+      - template: pipeline-release.yml
+        parameters:
+          SubscriptionName: "AZDOCSREPOPROVISIONERSUBSCRIPTIONDEV"
+          EnvironmentName: ${{ parameters.EnvironmentName_Dev }}
+          AzDocsBranchName: ${{ parameters.AzDocsBranchName }}
+          EnableApplicationGateway: true
+      - template: pipeline-release-gateway.yml
+        parameters:
+          SubscriptionName: "AZDOCSREPOPROVISIONERSUBSCRIPTIONDEV"
+          EnvironmentName: ${{ parameters.EnvironmentName_Dev }}
+          AzDocsBranchName: ${{ parameters.AzDocsBranchName }}
+          GatewayIngressDomainName: ${{ parameters.GatewayIngressDomainName_Dev }}
+          GatewayCertificateSecureFileName: ${{ parameters.GatewayCertificateSecureFileName_Dev }}
+          GatewayCertificatePassword: ${{ parameters.GatewayCertificatePassword_Dev }}
+  - stage: "${{ parameters.EnvironmentName_Acc }}"
+    displayName: "Deploy to ${{ parameters.EnvironmentName_Acc }}"
+    pool:
+      vmImage: $(Stage.Pool)
+    jobs:
+      - template: pipeline-release.yml
+        parameters:
+          SubscriptionName: "AZDOCSREPOPROVISIONERSUBSCRIPTIONACC"
+          EnvironmentName: ${{ parameters.EnvironmentName_Acc }}
+          AzDocsBranchName: ${{ parameters.AzDocsBranchName }}
+          EnableApplicationGateway: true
+      - template: pipeline-release-gateway.yml
+        parameters:
+          SubscriptionName: "AZDOCSREPOPROVISIONERSUBSCRIPTIONACC"
+          EnvironmentName: ${{ parameters.EnvironmentName_Acc }}
+          AzDocsBranchName: ${{ parameters.AzDocsBranchName }}
+          GatewayIngressDomainName: ${{ parameters.GatewayIngressDomainName_Acc }}
+          GatewayCertificateSecureFileName: ${{ parameters.GatewayCertificateSecureFileName_Acc }}
+          GatewayCertificatePassword: ${{ parameters.GatewayCertificatePassword_Acc }}
+  - stage: "${{ parameters.EnvironmentName_Prd }}"
+    displayName: "Deploy to ${{ parameters.EnvironmentName_Prd }}"
+    pool:
+      vmImage: $(Stage.Pool)
+    jobs:
+      - template: pipeline-release.yml
+        parameters:
+          SubscriptionName: "AZDOCSREPOPROVISIONERSUBSCRIPTIONPRD"
+          EnvironmentName: ${{ parameters.EnvironmentName_Prd }}
+          AzDocsBranchName: ${{ parameters.AzDocsBranchName }}
+          EnableApplicationGateway: true
+      - template: pipeline-release-gateway.yml
+        parameters:
+          SubscriptionName: "AZDOCSREPOPROVISIONERSUBSCRIPTIONPRD"
+          EnvironmentName: ${{ parameters.EnvironmentName_Prd }}
+          AzDocsBranchName: ${{ parameters.AzDocsBranchName }}
+          GatewayIngressDomainName: ${{ parameters.GatewayIngressDomainName_Prd }}
+          GatewayCertificateSecureFileName: ${{ parameters.GatewayCertificateSecureFileName_Prd }}
+          GatewayCertificatePassword: ${{ parameters.GatewayCertificatePassword_Prd }}

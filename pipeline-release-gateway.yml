@@ -1,0 +1,117 @@
+# Example template to deploy function-app release pipeline
+parameters:
+  - name: SubscriptionName
+    type: string
+    default: AZDOCSREPOPROVISIONERSUBSCRIPTIONDEV
+  - name: EnvironmentName
+    type: string
+    default: "dev"
+  - name: AzDocsBranchName
+    type: string
+  - name: GatewayIngressDomainName
+    type: string
+  - name: GatewayCertificateSecureFileName
+    type: string
+  - name: GatewayCertificatePassword
+    type: string
+
+jobs:
+  - deployment: "${{ parameters.EnvironmentName }}_AppGw"
+    dependsOn: "${{ parameters.EnvironmentName }}"
+    displayName: "Application Gateway ${{ parameters.EnvironmentName }}"
+    environment:
+      name: ${{ parameters.EnvironmentName }}
+    variables:
+      # Basic
+      - name: EnvironmentName
+        value: ${{ parameters.EnvironmentName }}
+
+      # Application gateway
+      - name: GatewayType
+        value: "Public"
+      - name: BackendDomainName
+        value: $(FunctionAppName).azurewebsites.net
+      - name: HealthProbePath
+        value: "/"
+      - name: GatewayRuleType
+        value: "Basic"
+      - name: HealthProbeInterval
+        value: "60"
+      - name: HealthProbeThreshold
+        value: "2"
+      - name: HealthProbeTimeout
+        value: "20"
+      - name: HealthProbeProtocol
+        value: "HTTPS"
+      - name: HttpsSettingsProtocol
+        value: "HTTPS"
+      - name: HttpsSettingsPort
+        value: "443"
+      - name: HttpsSettingsCookieAffinity
+        value: "Disabled"
+      - name: HttpsSettingsConnectionDrainingTimeout
+        value: "0"
+      - name: HttpsSettingsTimeout
+        value: "30"
+      - name: MatchStatusCodes
+        value: "200-399"
+      - name: FunctionAppName
+        value: $(CompanyName)-$(ProjectName)-${{ parameters.EnvironmentName }}
+
+      # Application Gateway WAF custom rule
+      - name: ApplicationGatewayWafCustomRuleAction
+        value: "Allow"
+      - name: ApplicationGatewayWafCustomRuleRequestHeader
+        value: "repoprovisioner"
+      - name: ApplicationGatewayWafCustomRuleRequestHeaderValue
+        value: "thisistherepoprovisioner2021"
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            # Download the artifact
+            - task: DownloadPipelineArtifact@2
+              displayName: Download AzDocs
+              inputs:
+                buildType: specific
+                project: "$(AzDocsTeamProjectId)"
+                definition: "$(AzDocsBuildDefinitionId)"
+                buildVersionToDownload: latestFromBranch
+                branchName: refs/heads/${{ parameters.AzDocsBranchName }}
+                artifactName: azdocs-src
+                targetPath: $(Pipeline.Workspace)/AzDocs
+            - task: AzureCLI@2
+              displayName: "Get Log Analytics Workspace Id"
+              name: "GetLogAnalyticsWorkspaceId"
+              condition: and(succeeded(), eq(variables['DeployInfra'], 'true'))
+              inputs:
+                azureSubscription: "${{ parameters.SubscriptionName }}"
+                scriptType: pscore
+                scriptPath: "$(Pipeline.Workspace)/AzDocs/Log-Analytics-Workspace/Get-Log-Analytics-Workspace-ResourceId-for-Pipeline.ps1"
+                arguments: "-LogAnalyticsWorkspaceResourceGroupName '$(LogAnalyticsWorkspaceResourceGroupName)' -LogAnalyticsWorkspaceName '$(LogAnalyticsWorkspaceName)' -OutputPipelineVariableName 'LogAnalyticsWorkspaceResourceId'"
+            - task: DownloadSecureFile@1
+              name: certificate
+              displayName: "Download certificate from secure files"
+              condition: and(succeeded(), eq(variables['DeployInfra'], 'true'))
+              inputs:
+                retryCount: "5"
+                secureFile: "${{ parameters.GatewayCertificateSecureFileName }}"
+            - task: AzureCLI@2
+              displayName: "Create ApplicationGateway Entrypoint for DomainName"
+              condition: and(succeeded(), eq(variables['DeployInfra'], 'true'))
+              inputs:
+                azureSubscription: "${{ parameters.SubscriptionName }}"
+                scriptType: pscore
+                scriptPath: "$(Pipeline.Workspace)/AzDocs/Application-Gateway/Create-Application-Gateway-Entrypoint-for-DomainName.ps1"
+                arguments: '-CertificatePath "$(certificate.secureFilePath)" -DomainName "${{ parameters.GatewayIngressDomainName }}" -Gatewayname "$(GatewayName)" -gatewayType "$(GatewayType)" -CertificateKeyvaultName "$(CertificateKeyvaultName)" -CertificatePassword "${{ parameters.GatewayCertificatePassword }}" -backendDomainName "$(BackendDomainName)" -healthProbePath "$(HealthProbePath)" -gatewayruletype "$(GatewayRuleType)" -healthProbeInterval "$(HealthProbeInterval)" -healthProbeThreshold "$(HealthProbeThreshold)" -healthProbeTimeout "$(HealthProbeTimeout)" -healthProbeProtocol "$(HealthProbeProtocol)" -httpsSettingsProtocol "$(HttpsSettingsProtocol)" -httpsSettingsPort "$(HttpsSettingsPort)" -httpsSettingsCookieAffinity "$(HttpsSettingsCookieAffinity)" -httpsSettingsConnectionDrainingTimeout "$(HttpsSettingsConnectionDrainingTimeout)" -httpsSettingsTimeout "$(HttpsSettingsTimeout)" -matchStatusCodes "$(MatchStatusCodes)" -ApplicationGatewayResourceGroupName "$(GatewayResourceGroupName)" -CertificateKeyvaultResourceGroupName "$(CertificateKeyvaultResourceGroupName)"'
+            - task: AzurePowerShell@5
+              displayName: Set AppGw Firewall Whitelist Rule
+              condition: and(succeeded(), eq(variables['DeployInfra'], 'true'), ne(variables['ApplicationGatewayWafName'], ''))
+              inputs:
+                azureSubscription: "${{ parameters.SubscriptionName }}"
+                ScriptType: "FilePath"
+                scriptPath: "$(Pipeline.Workspace)/AzDocs/Application-Gateway/Set-ApplicationGatewayFirewallWhitelistRule.ps1"
+                azurePowerShellVersion: "LatestVersion"
+                pwsh: true
+                ScriptArguments: "-IngressDomainName '${{ parameters.GatewayIngressDomainName }}' -ApplicationGatewayResourceGroupName '$(GatewayResourceGroupName)' -ApplicationGatewayWafName '$(ApplicationGatewayWafName)' -ApplicationGatewayWafCustomRuleAction '$(ApplicationGatewayWafCustomRuleAction)' -ApplicationGatewayWafCustomRuleRequestHeader '$(ApplicationGatewayWafCustomRuleRequestHeader)' -ApplicationGatewayWafCustomRuleRequestHeaderValue '$(ApplicationGatewayWafCustomRuleRequestHeaderValue)'"
